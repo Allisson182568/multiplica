@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Multiplika Logo Preview</title>
+<style>
+  body { background: #080808; display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; margin: 0; flex-direction: column; gap: 40px; font-family: sans-serif; }
+  .bg-dark { background: #080808; padding: 40px; border-radius: 20px; }
+  .bg-light { background: #f5f5f5; padding: 40px; border-radius: 20px; }
+  p { color: #888; font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="bg-dark">
+  <p style="color:#555">Fundo escuro (app)</p>
+  <!-- Logo SVG inline — versão fiel ao original flat -->
+  <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" fill="none">
+    <!-- ══ K ESQUERDO — GRAFITE ══ -->
+    <!-- Pilar vertical — 3 faixas -->
+    <line x1="72" y1="30" x2="72" y2="170" stroke="#2D3748" stroke-width="8" stroke-linecap="round"/>
+    <line x1="83" y1="30" x2="83" y2="170" stroke="#3A4A5C" stroke-width="5" stroke-linecap="round"/>
+    <line x1="92" y1="30" x2="92" y2="170" stroke="#4A5868" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Braço superior — diagonal ↗ (de perto do pilar para canto superior direito) -->
+    <line x1="88" y1="100" x2="116" y2="32" stroke="#2D3748" stroke-width="8" stroke-linecap="round"/>
+    <line x1="94" y1="100" x2="122" y2="32" stroke="#3A4A5C" stroke-width="5" stroke-linecap="round"/>
+    <line x1="100" y1="100" x2="128" y2="32" stroke="#4A5868" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Braço inferior — diagonal ↘ -->
+    <line x1="88" y1="100" x2="116" y2="168" stroke="#2D3748" stroke-width="8" stroke-linecap="round"/>
+    <line x1="94" y1="100" x2="122" y2="168" stroke="#3A4A5C" stroke-width="5" stroke-linecap="round"/>
+    <line x1="100" y1="100" x2="128" y2="168" stroke="#4A5868" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- ══ K DIREITO — COBRE (espelhado) ══ -->
+    <!-- Pilar vertical -->
+    <line x1="128" y1="30" x2="128" y2="170" stroke="#B87333" stroke-width="8" stroke-linecap="round"/>
+    <line x1="117" y1="30" x2="117" y2="170" stroke="#C68642" stroke-width="5" stroke-linecap="round"/>
+    <line x1="108" y1="30" x2="108" y2="170" stroke="#D4954F" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Braço superior ↖ -->
+    <line x1="112" y1="100" x2="84" y2="32" stroke="#B87333" stroke-width="8" stroke-linecap="round"/>
+    <line x1="106" y1="100" x2="78" y2="32" stroke="#C68642" stroke-width="5" stroke-linecap="round"/>
+    <line x1="100" y1="100" x2="72" y2="32" stroke="#D4954F" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Braço inferior ↙ -->
+    <line x1="112" y1="100" x2="84" y2="168" stroke="#B87333" stroke-width="8" stroke-linecap="round"/>
+    <line x1="106" y1="100" x2="78" y2="168" stroke="#C68642" stroke-width="5" stroke-linecap="round"/>
+    <line x1="100" y1="100" x2="72" y2="168" stroke="#D4954F" stroke-width="3" stroke-linecap="round"/>
+  </svg>
+</div>
+
+<div class="bg-light">
+  <p style="color:#aaa">Fundo claro (splash alternativo)</p>
+  <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" fill="none">
+    <line x1="72" y1="30" x2="72" y2="170" stroke="#2D3748" stroke-width="8" stroke-linecap="round"/>
+    <line x1="83" y1="30" x2="83" y2="170" stroke="#3A4A5C" stroke-width="5" stroke-linecap="round"/>
+    <line x1="92" y1="30" x2="92" y2="170" stroke="#4A5868" stroke-width="3" stroke-linecap="round"/>
+    <line x1="88" y1="100" x2="116" y2="32" stroke="#2D3748" stroke-width="8" stroke-linecap="round"/>
+    <line x1="94" y1="100" x2="122" y2="32" stroke="#3A4A5C" stroke-width="5" stroke-linecap="round"/>
+    <line x1="100" y1="100" x2="128" y2="32" stroke="#4A5868" stroke-width="3" stroke-linecap="round"/>
+    <line x1="88" y1="100" x2="116" y2="168" stroke="#2D3748" stroke-width="8" stroke-linecap="round"/>
+    <line x1="94" y1="100" x2="122" y2="168" stroke="#3A4A5C" stroke-width="5" stroke-linecap="round"/>
+    <line x1="100" y1="100" x2="128" y2="168" stroke="#4A5868" stroke-width="3" stroke-linecap="round"/>
+    <line x1="128" y1="30" x2="128" y2="170" stroke="#B87333" stroke-width="8" stroke-linecap="round"/>
+    <line x1="117" y1="30" x2="117" y2="170" stroke="#C68642" stroke-width="5" stroke-linecap="round"/>
+    <line x1="108" y1="30" x2="108" y2="170" stroke="#D4954F" stroke-width="3" stroke-linecap="round"/>
+    <line x1="112" y1="100" x2="84" y2="32" stroke="#B87333" stroke-width="8" stroke-linecap="round"/>
+    <line x1="106" y1="100" x2="78" y2="32" stroke="#C68642" stroke-width="5" stroke-linecap="round"/>
+    <line x1="100" y1="100" x2="72" y2="32" stroke="#D4954F" stroke-width="3" stroke-linecap="round"/>
+    <line x1="112" y1="100" x2="84" y2="168" stroke="#B87333" stroke-width="8" stroke-linecap="round"/>
+    <line x1="106" y1="100" x2="78" y2="168" stroke="#C68642" stroke-width="5" stroke-linecap="round"/>
+    <line x1="100" y1="100" x2="72" y2="168" stroke="#D4954F" stroke-width="3" stroke-linecap="round"/>
+  </svg>
+</div>
+
+</body>
+</html>
