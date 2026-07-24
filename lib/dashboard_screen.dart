@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app_theme.dart';
 import 'gd_card.dart';
+import 'obra_context.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -27,21 +28,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       // Nome do usuário
       final uid = _supa.auth.currentUser?.id;
+      Map<String, dynamic>? usuarioRow;
       if (uid != null) {
-        final u = await _supa.schema('grupo_dantas').from('usuarios')
-            .select('nome').eq('auth_id', uid).maybeSingle();
-        if (u != null && u['nome'] != null) _nomeUsuario = u['nome'];
+        usuarioRow = await _supa.schema('grupo_dantas').from('usuarios')
+            .select('id, nome, role').eq('auth_id', uid).maybeSingle();
+        if (usuarioRow != null && usuarioRow['nome'] != null) _nomeUsuario = usuarioRow['nome'];
       }
 
-      final obras = await _supa.schema('grupo_dantas').from('obras')
-          .select('id, nome, tipo, status, progresso_percentual, orcamento_total, custo_realizado, cidade, estado')
-          .order('atualizado_em', ascending: false);
-      final lista = List<Map<String, dynamic>>.from(obras);
+      // Obras visíveis: admin vê todas, demais só as vinculadas via obra_usuarios
+      final lista = await ObraContext.buscarObrasVisiveis(
+        select: 'id, nome, tipo, status, progresso_percentual, orcamento_total, custo_realizado, cidade, estado',
+        orderBy: 'atualizado_em',
+      );
 
-      final etapas = await _supa.schema('grupo_dantas').from('etapas')
-          .select('id, nome, status, progresso_percentual, obra_id, obras!inner(nome)')
-          .eq('status', 'em_andamento')
-          .order('atualizado_em', ascending: false).limit(5);
+      // Etapas em andamento — restritas às mesmas obras visíveis
+      List<Map<String, dynamic>> etapas = [];
+      if (lista.isNotEmpty) {
+        final obraIds = lista.map((o) => o['id'] as String).toList();
+        final ehAdmin = usuarioRow != null && usuarioRow['role'] == 'admin';
+        var query = _supa.schema('grupo_dantas').from('etapas')
+            .select('id, nome, status, progresso_percentual, obra_id, obras!inner(nome)')
+            .eq('status', 'em_andamento');
+        if (!ehAdmin) query = query.inFilter('obra_id', obraIds);
+        final etapasData = await query.order('atualizado_em', ascending: false).limit(5);
+        etapas = List<Map<String, dynamic>>.from(etapasData);
+      }
 
       setState(() {
         _obras       = lista;
@@ -49,7 +60,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _emAndamento = lista.where((o) => o['status'] == 'em_andamento').length;
         _concluidas  = lista.where((o) => o['status'] == 'concluida').length;
         _pausadas    = lista.where((o) => o['status'] == 'pausada').length;
-        _etapasAtivas = List<Map<String, dynamic>>.from(etapas);
+        _etapasAtivas = etapas;
         _loading     = false;
       });
     } catch (_) {
@@ -66,16 +77,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: CustomScrollView(slivers: [
           _buildAppBar(),
           SliverPadding(padding: const EdgeInsets.all(20),
-            sliver: SliverList(delegate: SliverChildListDelegate([
-              _buildKPIRow(),
-              const SizedBox(height: 24),
-              _buildObrasRecentes(),
-              if (_etapasAtivas.isNotEmpty) ...[
+              sliver: SliverList(delegate: SliverChildListDelegate([
+                _buildKPIRow(),
                 const SizedBox(height: 24),
-                _buildEtapasAtivas(),
-              ],
-              const SizedBox(height: 40),
-            ]))),
+                _buildObrasRecentes(),
+                if (_etapasAtivas.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  _buildEtapasAtivas(),
+                ],
+                const SizedBox(height: 40),
+              ]))),
         ]),
       ),
     );
@@ -90,14 +101,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsets.only(left: 20, bottom: 14),
         title: Column(mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(saudacao, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-          ShaderMask(
-            shaderCallback: (b) => AppTheme.goldGradient.createShader(b),
-            child: Text(_nomeUsuario, style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20)),
-          ),
-        ]),
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(saudacao, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+              ShaderMask(
+                shaderCallback: (b) => AppTheme.goldGradient.createShader(b),
+                child: Text(_nomeUsuario, style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20)),
+              ),
+            ]),
       ),
       actions: [
         IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _carregar),
@@ -118,23 +129,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return GridView.builder(
         shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossCount, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.6),
+            crossAxisCount: crossCount, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.6),
         itemCount: kpis.length,
         itemBuilder: (_, i) {
           final k = kpis[i];
           return GDCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Container(width: 34, height: 34,
-              decoration: BoxDecoration(color: k.color.withOpacity(0.12), borderRadius: BorderRadius.circular(9)),
-              child: Icon(k.icon, color: k.color, size: 17)),
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _loading
-                ? Container(width: 32, height: 24, decoration: BoxDecoration(
-                    color: AppTheme.cardBorder, borderRadius: BorderRadius.circular(4)))
-                : Text(k.value, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: k.color)),
-              Text(k.label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
-            ]),
-          ])).animate(delay: (i * 80).ms).fadeIn().slideY(begin: 0.2);
+              mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Container(width: 34, height: 34,
+                    decoration: BoxDecoration(color: k.color.withOpacity(0.12), borderRadius: BorderRadius.circular(9)),
+                    child: Icon(k.icon, color: k.color, size: 17)),
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  _loading
+                      ? Container(width: 32, height: 24, decoration: BoxDecoration(
+                      color: AppTheme.cardBorder, borderRadius: BorderRadius.circular(4)))
+                      : Text(k.value, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: k.color)),
+                  Text(k.label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                ]),
+              ])).animate(delay: (i * 80).ms).fadeIn().slideY(begin: 0.2);
         },
       );
     });
@@ -146,7 +157,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Text('Obras Recentes', style: Theme.of(context).textTheme.titleLarge),
         TextButton(onPressed: () => context.go('/obras'),
-          child: const Text('Ver todas', style: TextStyle(color: AppTheme.gold, fontSize: 13))),
+            child: const Text('Ver todas', style: TextStyle(color: AppTheme.gold, fontSize: 13))),
       ]),
       const SizedBox(height: 12),
       if (_loading)
@@ -155,20 +166,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
         GDCard(child: Column(children: [
           const Icon(Icons.construction_rounded, color: AppTheme.textMuted, size: 40),
           const SizedBox(height: 8),
-          const Text('Nenhuma obra cadastrada ainda', style: TextStyle(color: AppTheme.textSecondary)),
+          const Text('Nenhuma obra vinculada a você ainda', style: TextStyle(color: AppTheme.textSecondary)),
           const SizedBox(height: 12),
           ElevatedButton.icon(
-            onPressed: () => context.go('/obras/nova'),
-            icon: const Icon(Icons.add_rounded, size: 16),
-            label: const Text('Cadastrar primeira obra')),
+              onPressed: () => context.go('/obras/nova'),
+              icon: const Icon(Icons.add_rounded, size: 16),
+              label: const Text('Cadastrar primeira obra')),
         ]))
       else SizedBox(height: 190, child: ListView.separated(
-        scrollDirection: Axis.horizontal, itemCount: recentes.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (_, i) => SizedBox(width: 220,
-          child: _ObraMiniCard(obra: recentes[i])
-            .animate(delay: (i * 80).ms).fadeIn().slideX(begin: 0.2)),
-      )),
+          scrollDirection: Axis.horizontal, itemCount: recentes.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          itemBuilder: (_, i) => SizedBox(width: 220,
+              child: _ObraMiniCard(obra: recentes[i])
+                  .animate(delay: (i * 80).ms).fadeIn().slideX(begin: 0.2)),
+        )),
     ]);
   }
 
@@ -182,23 +193,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final prog = (e['progresso_percentual'] as num?)?.toDouble() ?? 0;
         final nomeObra = (e['obras'] as Map?)?['nome'] ?? '';
         return Padding(padding: const EdgeInsets.only(bottom: 10),
-          child: GDCard(child: Row(children: [
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(nomeObra, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 2),
-              Text(e['nome'] ?? '', style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 10),
-              ClipRRect(borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(value: prog / 100,
-                  backgroundColor: AppTheme.cardBorder,
-                  valueColor: AlwaysStoppedAnimation(prog > 70 ? AppTheme.success : AppTheme.gold),
-                  minHeight: 6)),
-            ])),
-            const SizedBox(width: 16),
-            Text('${prog.toInt()}%', style: TextStyle(
-              color: prog > 70 ? AppTheme.success : AppTheme.gold,
-              fontWeight: FontWeight.w700, fontSize: 18)),
-          ])).animate(delay: (i * 80).ms).fadeIn());
+            child: GDCard(child: Row(children: [
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(nomeObra, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 2),
+                Text(e['nome'] ?? '', style: Theme.of(context).textTheme.bodyMedium),
+                const SizedBox(height: 10),
+                ClipRRect(borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(value: prog / 100,
+                        backgroundColor: AppTheme.cardBorder,
+                        valueColor: AlwaysStoppedAnimation(prog > 70 ? AppTheme.success : AppTheme.gold),
+                        minHeight: 6)),
+              ])),
+              const SizedBox(width: 16),
+              Text('${prog.toInt()}%', style: TextStyle(
+                  color: prog > 70 ? AppTheme.success : AppTheme.gold,
+                  fontWeight: FontWeight.w700, fontSize: 18)),
+            ])).animate(delay: (i * 80).ms).fadeIn());
       }),
     ]);
   }
@@ -219,25 +230,25 @@ class _ObraMiniCard extends StatelessWidget {
       onTap: () => context.push('/obras/${obra['id']}'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(height: 70,
-          decoration: BoxDecoration(color: AppTheme.surfaceAlt,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
-          child: Center(child: Icon(_tipoIcon(tipo), size: 32, color: AppTheme.cardBorder))),
+            decoration: BoxDecoration(color: AppTheme.surfaceAlt,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
+            child: Center(child: Icon(_tipoIcon(tipo), size: 32, color: AppTheme.cardBorder))),
         Padding(padding: const EdgeInsets.all(12), child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, children: [
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(obra['nome'] ?? '', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 13),
-            maxLines: 1, overflow: TextOverflow.ellipsis),
+              maxLines: 1, overflow: TextOverflow.ellipsis),
           const SizedBox(height: 2),
           Text(AppTheme.statusLabel(status),
-            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+              style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Expanded(child: ClipRRect(borderRadius: BorderRadius.circular(3),
-              child: LinearProgressIndicator(value: prog / 100,
-                backgroundColor: AppTheme.cardBorder,
-                valueColor: AlwaysStoppedAnimation(color), minHeight: 4))),
+                child: LinearProgressIndicator(value: prog / 100,
+                    backgroundColor: AppTheme.cardBorder,
+                    valueColor: AlwaysStoppedAnimation(color), minHeight: 4))),
             const SizedBox(width: 8),
             Text('${prog.toInt()}%', style: TextStyle(
-              color: color, fontSize: 11, fontWeight: FontWeight.w700)),
+                color: color, fontSize: 11, fontWeight: FontWeight.w700)),
           ]),
         ])),
       ]),

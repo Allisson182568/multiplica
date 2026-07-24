@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app_theme.dart';
 import 'gd_card.dart';
+import 'obra_context.dart';
 
 class ObrasListScreen extends StatefulWidget {
   const ObrasListScreen({super.key});
@@ -28,14 +29,10 @@ class _ObrasListScreenState extends State<ObrasListScreen> {
   Future<void> _carregar() async {
     setState(() { _loading = true; _erro = null; });
     try {
-      var query = _supabase
-          .schema('grupo_dantas')
-          .from('obras')
-          .select('id, nome, tipo, status, progresso_percentual, orcamento_total, cidade, estado')
-          .order('criado_em', ascending: false);
-
-      final data = await query;
-      setState(() { _obras = List<Map<String, dynamic>>.from(data); _loading = false; });
+      final data = await ObraContext.buscarObrasVisiveis(
+        select: 'id, nome, tipo, status, progresso_percentual, orcamento_total, cidade, estado',
+      );
+      setState(() { _obras = data; _loading = false; });
     } catch (e) {
       setState(() { _erro = e.toString(); _loading = false; });
     }
@@ -120,7 +117,7 @@ class _ObrasListScreenState extends State<ObrasListScreen> {
         Text('Erro ao carregar obras', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         Text(_erro!, style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
-          textAlign: TextAlign.center),
+            textAlign: TextAlign.center),
         const SizedBox(height: 16),
         ElevatedButton.icon(
           onPressed: _carregar,
@@ -138,12 +135,12 @@ class _ObrasListScreenState extends State<ObrasListScreen> {
         Icon(Icons.construction_rounded, color: AppTheme.textMuted, size: 56),
         const SizedBox(height: 16),
         Text(
-          _obras.isEmpty ? 'Nenhuma obra cadastrada ainda' : 'Nenhuma obra neste filtro',
+          _obras.isEmpty ? 'Nenhuma obra vinculada a você ainda' : 'Nenhuma obra neste filtro',
           style: const TextStyle(color: AppTheme.textSecondary, fontSize: 15),
         ),
         if (_obras.isEmpty) ...[
           const SizedBox(height: 8),
-          const Text('Toque em + Nova Obra para começar',
+          const Text('Toque em + Nova Obra para começar, ou peça pra um admin te vincular a uma existente',
             style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
           ),
         ],
@@ -159,7 +156,7 @@ class _ObrasListScreenState extends State<ObrasListScreen> {
         itemCount: lista.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, i) => _ObraCard(obra: lista[i])
-          .animate(delay: (i * 50).ms).fadeIn().slideY(begin: 0.1),
+            .animate(delay: (i * 50).ms).fadeIn().slideY(begin: 0.1),
       ),
     );
   }
@@ -195,7 +192,7 @@ class _ObraCard extends StatelessWidget {
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(obra['nome'] ?? '', style: Theme.of(context).textTheme.titleMedium,
-            maxLines: 1, overflow: TextOverflow.ellipsis),
+              maxLines: 1, overflow: TextOverflow.ellipsis),
           const SizedBox(height: 2),
           Row(children: [
             Text(_tipoLabel(tipo), style: Theme.of(context).textTheme.bodySmall),
@@ -208,7 +205,7 @@ class _ObraCard extends StatelessWidget {
             if (local.isNotEmpty) ...[
               const Text(' · ', style: TextStyle(color: AppTheme.textMuted)),
               Flexible(child: Text(local, style: Theme.of(context).textTheme.bodySmall,
-                overflow: TextOverflow.ellipsis)),
+                  overflow: TextOverflow.ellipsis)),
             ],
           ]),
           const SizedBox(height: 8),
@@ -236,7 +233,7 @@ class _ObraCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(AppTheme.statusLabel(status),
-            style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+              style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
         ),
       ]),
     );
